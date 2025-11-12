@@ -32,7 +32,7 @@ export default function JDSkillMatrix() {
     setResult(null);
 
     try {
-      const apiKey = useAI ? 'AIzaSyA-OzKlJBXgBksZv4dNweJzDJt0-vJfqFc' : 'AIzaSyA-OzKlJBXgBksZv4dNweJzDJt0-vJfqFc';
+      const apiKey = useAI ? '' : '';
       const parsed = await extractSkillMatrix(jd, useAI, apiKey);
       const validation = validateSkillMatrix(parsed);
 
