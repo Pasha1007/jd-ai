@@ -1,29 +1,30 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { InputPanel } from '../components/InputPanel';
-import { ResultPanel } from '../components/ResultPanel';
-import { Toast } from '../components/Toast';
-import { extractSkillMatrix } from '../lib/api/extract';
-import { validateSkillMatrix } from '../lib/validation';
-import { SkillMatrix } from '../types';
+import React, { useState } from "react";
+import { InputPanel } from "../components/InputPanel";
+import { ResultPanel } from "../components/ResultPanel";
+import { Toast } from "../components/Toast";
+import { SkillMatrix } from "@/lib/schemas/skillMatrix.schema";
 
 export default function JDSkillMatrix() {
-  const [jd, setJd] = useState('');
+  const [jd, setJd] = useState("");
   const [result, setResult] = useState<SkillMatrix | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [useAI, setUseAI] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error";
+  } | null>(null);
 
-  const showToast = (message: string, type: 'success' | 'error') => {
+  const showToast = (message: string, type: "success" | "error") => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
   };
 
   const handleAnalyze = async () => {
     if (!jd.trim()) {
-      setError('Please paste a job description');
+      setError("Please paste a job description");
       return;
     }
 
@@ -32,20 +33,34 @@ export default function JDSkillMatrix() {
     setResult(null);
 
     try {
-      const apiKey = useAI ? '' : '';
-      const parsed = await extractSkillMatrix(jd, useAI, apiKey);
-      const validation = validateSkillMatrix(parsed);
+      const response = await fetch("/api/analyze", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ jd, useAI }),
+      });
 
-      if (!validation.valid) {
-        throw new Error(`Validation failed: ${validation.errors.join(', ')}`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to analyze job description");
       }
 
-      setResult(parsed);
-      showToast(`Analysis complete! ${useAI ? '(AI-powered)' : '(Fallback parser)'}`, 'success');
+      setResult(data.data);
+      showToast(
+        `Analysis complete! ${
+          data.method === "ai" ? "(AI-powered)" : "(Fallback parser)"
+        }`,
+        "success"
+      );
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to analyze job description';
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Failed to analyze job description";
       setError(message);
-      showToast(message, 'error');
+      showToast(message, "error");
     } finally {
       setLoading(false);
     }
@@ -54,7 +69,7 @@ export default function JDSkillMatrix() {
   const handleCopyJSON = () => {
     if (result) {
       navigator.clipboard.writeText(JSON.stringify(result, null, 2));
-      showToast('JSON copied to clipboard!', 'success');
+      showToast("JSON copied to clipboard!", "success");
     }
   };
 

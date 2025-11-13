@@ -1,5 +1,5 @@
-import React from 'react';
-import { Loader2, Sparkles, AlertCircle } from 'lucide-react';
+import React from "react";
+import { Loader2, Sparkles, AlertCircle } from "lucide-react";
 
 interface InputPanelProps {
   jd: string;
@@ -18,7 +18,7 @@ export function InputPanel({
   onUseAIToggle,
   onAnalyze,
   loading,
-  error
+  error,
 }: InputPanelProps) {
   return (
     <div className="bg-white rounded-lg shadow-lg p-6">
@@ -31,7 +31,7 @@ export function InputPanel({
         placeholder="Paste the full job description here..."
         className="w-full h-80 p-4 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none font-mono text-slate-700 text-sm"
       />
-      
+
       <div className="mt-4 flex items-center justify-between p-3 bg-slate-50 rounded-lg">
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-purple-600" />
@@ -42,12 +42,12 @@ export function InputPanel({
         <button
           onClick={onUseAIToggle}
           className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-            useAI ? 'bg-purple-600' : 'bg-slate-300'
+            useAI ? "bg-purple-600" : "bg-slate-300"
           }`}
         >
           <span
             className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-              useAI ? 'translate-x-6' : 'translate-x-1'
+              useAI ? "translate-x-6" : "translate-x-1"
             }`}
           />
         </button>
@@ -64,7 +64,7 @@ export function InputPanel({
             Analyzing...
           </>
         ) : (
-          'Analyze'
+          "Analyze"
         )}
       </button>
 

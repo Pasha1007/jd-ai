@@ -1,7 +1,8 @@
-import { SkillMatrix } from '../../types';
-import { validateSkillMatrix } from '../validation';
+import { SkillMatrix, skillMatrixSchema } from "../schemas/skillMatrix.schema";
 
-const GEMINI_PROMPT_TEMPLATE = (jd: string) => `You are a job description parser. Extract structured information from the following job description and return ONLY a valid JSON object with NO additional text, markdown formatting, or code blocks.
+const GEMINI_PROMPT_TEMPLATE = (
+  jd: string
+) => `You are a job description parser. Extract structured information from the following job description and return ONLY a valid JSON object with NO additional text, markdown formatting, or code blocks.
 
 Required JSON schema:
 {
@@ -29,7 +30,10 @@ ${jd}
 
 Return ONLY the JSON object, nothing else:`;
 
-const RETRY_PROMPT_TEMPLATE = (jd: string, errors: string[]) => `The previous JSON was invalid: ${errors.join(', ')}
+const RETRY_PROMPT_TEMPLATE = (
+  jd: string,
+  errors: string[]
+) => `The previous JSON was invalid: ${errors.join(", ")}
 
 Please fix and return ONLY a valid JSON object matching this exact schema:
 {
@@ -52,51 +56,96 @@ Original data to parse:
 ${jd}`;
 
 async function callGeminiAPI(prompt: string, apiKey: string): Promise<string> {
-  const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-goog-api-key': apiKey
-    },
-    body: JSON.stringify({
-      contents: [{
-        parts: [{ text: prompt }]
-      }],
-      generationConfig: {
-        temperature: 0.1,
-        maxOutputTokens: 2048
-      }
-    })
-  });
+  console.log("Calling Gemini API...");
+
+  const response = await fetch(
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": apiKey,
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [{ text: prompt }],
+          },
+        ],
+        generationConfig: {
+          temperature: 0.1,
+          maxOutputTokens: 2048,
+        },
+      }),
+    }
+  );
 
   if (!response.ok) {
-    throw new Error(`Gemini API error: ${response.status}`);
+    const errorText = await response.text();
+    console.error(`Gemini API HTTP error ${response.status}:`, errorText);
+    throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
   }
 
   const data = await response.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-  
-  return text.trim().replace(/```json\n?/g, '').replace(/```\n?/g, '');
+  console.log("Gemini API response received");
+
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+
+  if (!text) {
+    console.error(
+      "❌ No text in Gemini response:",
+      JSON.stringify(data, null, 2)
+    );
+    throw new Error("Gemini API returned empty response");
+  }
+
+  console.log("Gemini API text extracted, length:", text.length);
+  return text
+    .trim()
+    .replace(/```json\n?/g, "")
+    .replace(/```\n?/g, "");
 }
 
-export async function geminiParser(jd: string, apiKey: string): Promise<SkillMatrix> {
+export async function geminiParser(
+  jd: string,
+  apiKey: string
+): Promise<SkillMatrix> {
   try {
+    console.log("Starting Gemini parser...");
     const cleanText = await callGeminiAPI(GEMINI_PROMPT_TEMPLATE(jd), apiKey);
+    console.log("Parsing JSON response...");
     let parsed = JSON.parse(cleanText);
-    let validation = validateSkillMatrix(parsed);
-    
-    if (!validation.valid) {
-      const retryText = await callGeminiAPI(RETRY_PROMPT_TEMPLATE(jd, validation.errors), apiKey);
+
+    console.log("Validating with Zod schema...");
+    let validationResult = skillMatrixSchema.safeParse(parsed);
+
+    if (!validationResult.success) {
+      const errors = validationResult.error.issues.map(
+        (e) => `${e.path.join(".")}: ${e.message}`
+      );
+      console.log("Validation failed, retrying with errors:", errors);
+      const retryText = await callGeminiAPI(
+        RETRY_PROMPT_TEMPLATE(jd, errors),
+        apiKey
+      );
       parsed = JSON.parse(retryText);
-      validation = validateSkillMatrix(parsed);
+      validationResult = skillMatrixSchema.safeParse(parsed);
     }
 
-    if (!validation.valid) {
-      throw new Error(`Schema validation failed: ${validation.errors.join(', ')}`);
+    if (!validationResult.success) {
+      const errors = validationResult.error.issues.map(
+        (e) => `${e.path.join(".")}: ${e.message}`
+      );
+      console.error("Final validation failed:", errors);
+      throw new Error(`Schema validation failed: ${errors.join(", ")}`);
     }
 
-    return parsed;
+    console.log("Gemini parser completed successfully!");
+    return validationResult.data;
   } catch (error) {
-    throw new Error(error instanceof Error ? error.message : 'Gemini API call failed');
+    console.error("Gemini parser error:", error);
+    throw new Error(
+      error instanceof Error ? error.message : "Gemini API call failed"
+    );
   }
 }

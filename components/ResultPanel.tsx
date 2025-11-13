@@ -1,6 +1,6 @@
-import React from 'react';
-import { Copy, AlertCircle } from 'lucide-react';
-import { SkillMatrix } from '../types';
+import React from "react";
+import { Copy, AlertCircle } from "lucide-react";
+import { SkillMatrix } from "@/lib/schemas/skillMatrix.schema";
 
 interface ResultPanelProps {
   result: SkillMatrix | null;
@@ -64,29 +64,32 @@ export function ResultPanel({ result, onCopyJSON }: ResultPanelProps) {
         </div>
 
         <div className="space-y-2">
-          {Object.entries(result.skills).map(([category, items]) => 
-            items.length > 0 && (
-              <div key={category} className="p-3 bg-slate-50 rounded-lg">
-                <div className="text-xs font-semibold text-slate-600 mb-2 capitalize">
-                  {category}
+          {Object.entries(result.skills).map(
+            ([category, items]) =>
+              items.length > 0 && (
+                <div key={category} className="p-3 bg-slate-50 rounded-lg">
+                  <div className="text-xs font-semibold text-slate-600 mb-2 capitalize">
+                    {category}
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {items.map((skill, idx) => (
+                      <span
+                        key={idx}
+                        className="px-2 py-1 bg-white border border-slate-200 rounded text-xs text-slate-700"
+                      >
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-1">
-                  {items.map((skill, idx) => (
-                    <span
-                      key={idx}
-                      className="px-2 py-1 bg-white border border-slate-200 rounded text-xs text-slate-700"
-                    >
-                      {skill}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )
+              )
           )}
         </div>
 
         <div>
-          <h3 className="text-xs font-semibold text-slate-600 mb-2">Full JSON</h3>
+          <h3 className="text-xs font-semibold text-slate-600 mb-2">
+            Full JSON
+          </h3>
           <pre className="p-4 bg-slate-900 text-slate-100 rounded-lg text-xs overflow-x-auto max-h-64 overflow-y-auto">
             {JSON.stringify(result, null, 2)}
           </pre>
